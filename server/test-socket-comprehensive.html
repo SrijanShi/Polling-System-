@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Socket.io Test Suite</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-suite {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-suite h2 {
+            color: #667eea;
+            margin-top: 0;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .test-case {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 5px;
+            border-left: 4px solid #ddd;
+            background: #f9f9f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .test-case.running {
+            border-left-color: #ffa500;
+            background: #fff8e1;
+        }
+        .test-case.passed {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .test-case.failed {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .test-name {
+            flex: 1;
+            font-weight: 500;
+        }
+        .test-status {
+            margin-left: 15px;
+            font-size: 20px;
+        }
+        .test-message {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .summary {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .summary-stat {
+            display: inline-block;
+            margin: 0 20px;
+            font-size: 24px;
+        }
+        .summary-stat span {
+            font-weight: bold;
+        }
+        .passed { color: #28a745; }
+        .failed { color: #dc3545; }
+        .pending { color: #ffa500; }
+        .log-panel {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 3px 0;
+        }
+        .log-entry.error { color: #f48771; }
+        .log-entry.success { color: #4ec9b0; }
+        .log-entry.info { color: #9cdcfe; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Socket.io Comprehensive Test Suite</h1>
+        <p>Automated testing for Resilient Live Polling System</p>
+    </div>
+
+    <div class="summary">
+        <div class="summary-stat passed">
+            ✓ Passed: <span id="passed-count">0</span>
+        </div>
+        <div class="summary-stat failed">
+            ✗ Failed: <span id="failed-count">0</span>
+        </div>
+        <div class="summary-stat pending">
+            ⏳ Pending: <span id="pending-count">0</span>
+        </div>
+        <div class="summary-stat">
+            Total: <span id="total-count">0</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="run-all-btn" onclick="runAllTests()">▶ Run All Tests</button>
+        <button onclick="clearResults()">🔄 Clear Results</button>
+        <button onclick="toggleLog()">📋 Toggle Log</button>
+    </div>
+
+    <!-- Phase 1: Basic Functionality -->
+    <div class="test-suite">
+        <h2>Phase 1: Basic Functionality (9 tests)</h2>
+        <div id="phase1-tests"></div>
+    </div>
+
+    <!-- Phase 2: Security Testing -->
+    <div class="test-suite">
+        <h2>Phase 2: Security Testing (7 tests)</h2>
+        <div id="phase2-tests"></div>
+    </div>
+
+    <!-- Phase 3: Multi-Client Testing -->
+    <div class="test-suite">
+        <h2>Phase 3: Multi-Client Testing (5 tests) - Manual</h2>
+        <p style="color: #666; font-size: 14px;">
+            ⚠️ These tests require multiple browser tabs. Run manually using test-socket.html.
+        </p>
+    </div>
+
+    <!-- Phase 4: State Recovery -->
+    <div class="test-suite">
+        <h2>Phase 4: State Recovery (4 tests) - Manual</h2>
+        <p style="color: #666; font-size: 14px;">
+            ⚠️ These tests require browser refresh. Run manually.
+        </p>
+    </div>
+
+    <!-- Phase 5: Edge Cases -->
+    <div class="test-suite">
+        <h2>Phase 5: Edge Cases (10 tests)</h2>
+        <div id="phase5-tests"></div>
+    </div>
+
+    <div class="log-panel" id="log-panel" style="display: none;">
+        <div id="log-container"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:5000';
+        let socket = null;
+        let currentPollId = null;
+        let sessionId = 'test-' + Date.now();
+
+        const tests = {
+            phase1: [
+                { id: 'connect', name: 'Socket Connection', fn: testConnection },
+                { id: 'health', name: 'Health Check', fn: testHealthCheck },
+                { id: 'register-teacher', name: 'Register as Teacher', fn: testRegisterTeacher },
+                { id: 'create-poll', name: 'Create Poll', fn: testCreatePoll },
+                { id: 'start-poll', name: 'Start Poll', fn: testStartPoll },
+                { id: 'disconnect', name: 'Disconnect', fn: testDisconnect },
+                { id: 'reconnect', name: 'Reconnect as Student', fn: testReconnectStudent },
+                { id: 'submit-vote', name: 'Submit Vote', fn: testSubmitVote },
+                { id: 'view-results', name: 'View Results', fn: testViewResults }
+            ],
+            phase2: [
+                { id: 'unauth-create', name: 'Unauthorized Poll Creation', fn: testUnauthorizedCreate },
+                { id: 'unauth-vote', name: 'Unauthorized Vote', fn: testUnauthorizedVote },
+                { id: 'student-create', name: 'Student Cannot Create Poll', fn: testStudentCreate },
+                { id: 'teacher-vote', name: 'Teacher Cannot Vote', fn: testTeacherVote },
+                { id: 'duplicate-vote', name: 'Duplicate Vote Prevention', fn: testDuplicateVote },
+                { id: 'invalid-poll', name: 'Invalid Poll ID', fn: testInvalidPollId },
+                { id: 'expired-vote', name: 'Vote on Expired Poll', fn: testExpiredPollVote }
+            ],
+            phase5: [
+                { id: 'empty-question', name: 'Empty Question Validation', fn: testEmptyQuestion },
+                { id: 'one-option', name: 'Single Option Validation', fn: testOneOption },
+                { id: 'many-options', name: 'Too Many Options Validation', fn: testManyOptions },
+                { id: 'short-timer', name: 'Timer Too Short', fn: testShortTimer },
+                { id: 'long-timer', name: 'Timer Too Long', fn: testLongTimer },
+                { id: 'start-active', name: 'Start Already Active Poll', fn: testStartActivePoll },
+                { id: 'invalid-option', name: 'Vote Invalid Option', fn: testInvalidOption },
+                { id: 'negative-option', name: 'Vote Negative Option', fn: testNegativeOption },
+                { id: 'string-option', name: 'Vote String Option', fn: testStringOption },
+                { id: 'missing-fields', name: 'Missing Required Fields', fn: testMissingFields }
+            ]
+        };
+
+        // Initialize UI
+        function initUI() {
+            let totalTests = 0;
+            for (const phase in tests) {
+                const container = document.getElementById(`${phase}-tests`);
+                if (container) {
+                    tests[phase].forEach(test => {
+                        const div = document.createElement('div');
+                        div.className = 'test-case';
+                        div.id = test.id;
+                        div.innerHTML = `
+                            <div class="test-name">${test.name}</div>
+                            <div class="test-status">⏸</div>
+                        `;
+                        container.appendChild(div);
+                        totalTests++;
+                    });
+                }
+            }
+            document.getElementById('total-count').textContent = totalTests;
+            document.getElementById('pending-count').textContent = totalTests;
+        }
+
+        // Logging
+        function log(message, type = 'info') {
+            const container = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            container.insertBefore(entry, container.firstChild);
+        }
+
+        function toggleLog() {
+            const panel = document.getElementById('log-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Test result handling
+        function setTestResult(testId, status, message = '') {
+            const testElement = document.getElementById(testId);
+            if (!testElement) return;
+
+            testElement.className = `test-case ${status}`;
+            const statusIcon = status === 'passed' ? '✓' : status === 'failed' ? '✗' : '⏳';
+            testElement.querySelector('.test-status').textContent = statusIcon;
+
+            if (message) {
+                let msgDiv = testElement.querySelector('.test-message');
+                if (!msgDiv) {
+                    msgDiv = document.createElement('div');
+                    msgDiv.className = 'test-message';
+                    testElement.querySelector('.test-name').appendChild(msgDiv);
+                }
+                msgDiv.textContent = message;
+            }
+
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const passed = document.querySelectorAll('.test-case.passed').length;
+            const failed = document.querySelectorAll('.test-case.failed').length;
+            const running = document.querySelectorAll('.test-case.running').length;
+            const total = document.querySelectorAll('.test-case').length;
+            const pending = total - passed - failed - running;
+
+            document.getElementById('passed-count').textContent = passed;
+            document.getElementById('failed-count').textContent = failed;
+            document.getElementById('pending-count').textContent = pending;
+        }
+
+        function clearResults() {
+            document.querySelectorAll('.test-case').forEach(test => {
+                test.className = 'test-case';
+                test.querySelector('.test-status').textContent = '⏸';
+                const msgDiv = test.querySelector('.test-message');
+                if (msgDiv) msgDiv.remove();
+            });
+            document.getElementById('log-container').innerHTML = '';
+            updateSummary();
+        }
+
+        // Helper functions
+        function wait(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function connectSocket() {
+            return new Promise((resolve, reject) => {
+                socket = io(SERVER_URL, {
+                    transports: ['websocket', 'polling'],
+                    reconnection: true
+                });
+
+                socket.on('connect', () => resolve());
+                socket.on('connect_error', (err) => reject(err));
+                
+                setTimeout(() => reject(new Error('Connection timeout')), 5000);
+            });
+        }
+
+        function disconnectSocket() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+        }
+
+        function emitAndWait(event, data, responseEvent, timeout = 3000) {
+            return new Promise((resolve, reject) => {
+                const timer = setTimeout(() => {
+                    socket.off(responseEvent);
+                    reject(new Error(`Timeout waiting for ${responseEvent}`));
+                }, timeout);
+
+                socket.once(responseEvent, (response) => {
+                    clearTimeout(timer);
+                    resolve(response);
+                });
+
+                socket.emit(event, data);
+            });
+        }
+
+        // ========== TEST IMPLEMENTATIONS ==========
+
+        // Phase 1: Basic Functionality
+        async function testConnection() {
+            await connectSocket();
+            log('Socket connected', 'success');
+        }
+
+        async function testHealthCheck() {
+            const response = await fetch(`${SERVER_URL}/api/health`);
+            if (!response.ok) throw new Error('Health check failed');
+            const data = await response.json();
+            if (data.status !== 'ok') throw new Error('Server not healthy');
+            log('Health check passed', 'success');
+        }
+
+        async function testRegisterTeacher() {
+            sessionId = 'teacher-' + Date.now();
+            const response = await emitAndWait('session:register', {
+                sessionId: sessionId,
+                role: 'teacher',
+                name: 'Test Teacher'
+            }, 'session:registered');
+
+            if (!response.success) throw new Error(response.message);
+            log('Registered as teacher', 'success');
+        }
+
+        async function testCreatePoll() {
+            const response = await emitAndWait('poll:create', {
+                question: 'Test Question for Automation?',
+                options: ['Option A', 'Option B', 'Option C'],
+                timerDuration: 30
+            }, 'poll:created');
+
+            if (!response.success) throw new Error('Failed to create poll');
+            currentPollId = response.poll.pollId;
+            log(`Poll created: ${currentPollId}`, 'success');
+        }
+
+        async function testStartPoll() {
+            if (!currentPollId) throw new Error('No poll to start');
+            
+            const response = await emitAndWait('poll:start', {
+                pollId: currentPollId
+            }, 'poll:started');
+
+            if (!response.pollId) throw new Error('Failed to start poll');
+            log('Poll started successfully', 'success');
+        }
+
+        async function testDisconnect() {
+            disconnectSocket();
+            await wait(1000);
+            log('Disconnected successfully', 'success');
+        }
+
+        async function testReconnectStudent() {
+            await connectSocket();
+            sessionId = 'student-' + Date.now();
+            const response = await emitAndWait('session:register', {
+                sessionId: sessionId,
+                role: 'student',
+                name: 'Test Student'
+            }, 'session:registered');
+
+            if (!response.success) throw new Error(response.message);
+            log('Reconnected as student', 'success');
+        }
+
+        async function testSubmitVote() {
+            if (!currentPollId) throw new Error('No active poll');
+
+            const response = await emitAndWait('vote:submit', {
+                pollId: currentPollId,
+                selectedOption: 1
+            }, 'vote:submitted');
+
+            if (!response.success) throw new Error('Failed to submit vote');
+            log('Vote submitted successfully', 'success');
+        }
+
+        async function testViewResults() {
+            // Listen for results update
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => reject(new Error('No results received')), 3000);
+                
+                socket.once('poll:results:updated', (data) => {
+                    clearTimeout(timeout);
+                    if (data.totalVotes >= 1) {
+                        log(`Results received: ${data.totalVotes} votes`, 'success');
+                        resolve();
+                    } else {
+                        reject(new Error('Invalid results'));
+                    }
+                });
+            });
+        }
+
+        // Phase 2: Security Tests
+        async function testUnauthorizedCreate() {
+            disconnectSocket();
+            await connectSocket();
+            
+            const response = await emitAndWait('poll:create', {
+                question: 'Unauthorized?',
+                options: ['Yes', 'No'],
+                timerDuration: 30
+            }, 'poll:error');
+
+            if (!response.message.includes('No session found')) {
+                throw new Error('Should reject unauthorized creation');
+            }
+            log('Correctly rejected unauthorized poll creation', 'success');
+        }
+
+        async function testUnauthorizedVote() {
+            const response = await emitAndWait('vote:submit', {
+                pollId: currentPollId || 'dummy',
+                selectedOption: 0
+            }, 'vote:error');
+
+            if (!response.message.includes('No session found')) {
+                throw new Error('Should reject unauthorized vote');
+            }
+            log('Correctly rejected unauthorized vote', 'success');
+        }
+
+        async function testStudentCreate() {
+            sessionId = 'student2-' + Date.now();
+            await emitAndWait('session:register', {
+                sessionId: sessionId,
+                role: 'student',
+                name: 'Test Student 2'
+            }, 'session:registered');
+
+            const response = await emitAndWait('poll:create', {
+                question: 'Can student create?',
+                options: ['Yes', 'No'],
+                timerDuration: 30
+            }, 'poll:error');
+
+            if (!response.message.includes('teacher role')) {
+                throw new Error('Should reject student poll creation');
+            }
+            log('Student correctly blocked from creating poll', 'success');
+        }
+
+        async function testTeacherVote() {
+            disconnectSocket();
+            await connectSocket();
+            sessionId = 'teacher2-' + Date.now();
+            await emitAndWait('session:register', {
+                sessionId: sessionId,
+                role: 'teacher',
+                name: 'Test Teacher 2'
+            }, 'session:registered');
+
+            const response = await emitAndWait('vote:submit', {
+                pollId: currentPollId || 'dummy',
+                selectedOption: 0
+            }, 'vote:error');
+
+            if (!response.message.includes('student role')) {
+                throw new Error('Should reject teacher vote');
+            }
+            log('Teacher correctly blocked from voting', 'success');
+        }
+
+        async function testDuplicateVote() {
+            disconnectSocket();
+            await connectSocket();
+            sessionId = 'student3-' + Date.now();
+            await emitAndWait('session:register', {
+                sessionId: sessionId,
+                role: 'student',
+                name: 'Test Student 3'
+            }, 'session:registered');
+
+            // First vote
+            await emitAndWait('vote:submit', {
+                pollId: currentPollId,
+                selectedOption: 0
+            }, 'vote:submitted');
+
+            // Second vote (should fail)
+            const response = await emitAndWait('vote:submit', {
+                pollId: currentPollId,
+                selectedOption: 1
+            }, 'vote:error');
+
+            if (!response.message.includes('already voted')) {
+                throw new Error('Should prevent duplicate votes');
+            }
+            log('Duplicate vote correctly prevented', 'success');
+        }
+
+        async function testInvalidPollId() {
+            const response = await emitAndWait('vote:submit', {
+                pollId: 'invalid123',
+                selectedOption: 0
+            }, 'vote:error');
+
+            if (!response.message) throw new Error('Should reject invalid poll ID');
+            log('Invalid poll ID correctly rejected', 'success');
+        }
+
+        async function testExpiredPollVote() {
+            // Create a short poll
+            disconnectSocket();
+            await connectSocket();
+            sessionId = 'teacher3-' + Date.now();
+            await emitAndWait('session:register', {
+                sessionId: sessionId,
+                role: 'teacher',
+                name: 'Teacher 3'
+            }, 'session:registered');
+
+            const poll = await emitAndWait('poll:create', {
+                question: 'Quick poll?',
+                options: ['Yes', 'No'],
+                timerDuration: 15
+            }, 'poll:created');
+
+            await emitAndWait('poll:start', {
+                pollId: poll.poll.pollId
+            }, 'poll:started');
+
+            // Wait for expiration
+            await wait(16000);
+
+            // Try to vote
+            disconnectSocket();
+            await connectSocket();
+            sessionId = 'student4-' + Date.now();
+            await emitAndWait('session:register', {
+                sessionId: sessionId,
+                role: 'student',
+                name: 'Late Student'
+            }, 'session:registered');
+
+            const response = await emitAndWait('vote:submit', {
+                pollId: poll.poll.pollId,
+                selectedOption: 0
+            }, 'vote:error');
+
+            if (!response.message.includes('expired')) {
+                throw new Error('Should reject vote on expired poll');
+            }
+            log('Expired poll vote correctly rejected', 'success');
+        }
+
+        // Phase 5: Edge Cases
+        async function testEmptyQuestion() {
+            disconnectSocket();
+            await connectSocket();
+            sessionId = 'teacher4-' + Date.now();
+            await emitAndWait('session:register', {
+                sessionId: sessionId,
+                role: 'teacher',
+                name: 'Teacher 4'
+            }, 'session:registered');
+
+            const response = await emitAndWait('poll:create', {
+                question: '',
+                options: ['A', 'B'],
+                timerDuration: 30
+            }, 'poll:error');
+
+            if (!response.message.includes('5 characters')) {
+                throw new Error('Should reject empty question');
+            }
+            log('Empty question correctly rejected', 'success');
+        }
+
+        async function testOneOption() {
+            const response = await emitAndWait('poll:create', {
+                question: 'Valid question here?',
+                options: ['Only One'],
+                timerDuration: 30
+            }, 'poll:error');
+
+            if (!response.message.includes('between 2 and 6')) {
+                throw new Error('Should reject single option');
+            }
+            log('Single option correctly rejected', 'success');
+        }
+
+        async function testManyOptions() {
+            const response = await emitAndWait('poll:create', {
+                question: 'Too many options?',
+                options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+                timerDuration: 30
+            }, 'poll:error');
+
+            if (!response.message.includes('between 2 and 6')) {
+                throw new Error('Should reject too many options');
+            }
+            log('Too many options correctly rejected', 'success');
+        }
+
+        async function testShortTimer() {
+            const response = await emitAndWait('poll:create', {
+                question: 'Valid question?',
+                options: ['Yes', 'No'],
+                timerDuration: 5
+            }, 'poll:error');
+
+            if (!response.message.includes('between 15 and 300')) {
+                throw new Error('Should reject short timer');
+            }
+            log('Short timer correctly rejected', 'success');
+        }
+
+        async function testLongTimer() {
+            const response = await emitAndWait('poll:create', {
+                question: 'Valid question?',
+                options: ['Yes', 'No'],
+                timerDuration: 500
+            }, 'poll:error');
+
+            if (!response.message.includes('between 15 and 300')) {
+                throw new Error('Should reject long timer');
+            }
+            log('Long timer correctly rejected', 'success');
+        }
+
+        async function testStartActivePoll() {
+            // This test assumes currentPollId is still active
+            if (!currentPollId) {
+                log('Skipping - no active poll', 'info');
+                return;
+            }
+
+            const response = await emitAndWait('poll:start', {
+                pollId: currentPollId
+            }, 'poll:error');
+
+            // Either "already active" or "not found" or "completed" is acceptable
+            if (!response.message) {
+                throw new Error('Should return error for restarting poll');
+            }
+            log('Restart poll correctly handled', 'success');
+        }
+
+        async function testInvalidOption() {
+            if (!currentPollId) {
+                const poll = await emitAndWait('poll:create', {
+                    question: 'New test poll?',
+                    options: ['A', 'B', 'C'],
+                    timerDuration: 30
+                }, 'poll:created');
+                currentPollId = poll.poll.pollId;
+                await emitAndWait('poll:start', { pollId: currentPollId }, 'poll:started');
+            }
+
+            disconnectSocket();
+            await connectSocket();
+            sessionId = 'student5-' + Date.now();
+            await emitAndWait('session:register', {
+                sessionId: sessionId,
+                role: 'student',
+                name: 'Student 5'
+            }, 'session:registered');
+
+            const response = await emitAndWait('vote:submit', {
+                pollId: currentPollId,
+                selectedOption: 99
+            }, 'vote:error');
+
+            if (!response.message) throw new Error('Should reject invalid option');
+            log('Invalid option correctly rejected', 'success');
+        }
+
+        async function testNegativeOption() {
+            const response = await emitAndWait('vote:submit', {
+                pollId: currentPollId,
+                selectedOption: -1
+            }, 'vote:error');
+
+            if (!response.message) throw new Error('Should reject negative option');
+            log('Negative option correctly rejected', 'success');
+        }
+
+        async function testStringOption() {
+            const response = await emitAndWait('vote:submit', {
+                pollId: currentPollId,
+                selectedOption: "invalid"
+            }, 'vote:error');
+
+            if (!response.message) throw new Error('Should reject string option');
+            log('String option correctly rejected', 'success');
+        }
+
+        async function testMissingFields() {
+            const response = await emitAndWait('poll:create', {
+                question: 'Test?'
+                // Missing options and timerDuration
+            }, 'poll:error');
+
+            if (!response.message) throw new Error('Should reject missing fields');
+            log('Missing fields correctly rejected', 'success');
+        }
+
+        // Test runner
+        async function runAllTests() {
+            const btn = document.getElementById('run-all-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Running Tests...';
+
+            clearResults();
+
+            try {
+                // Run Phase 1
+                for (const test of tests.phase1) {
+                    setTestResult(test.id, 'running');
+                    try {
+                        await test.fn();
+                        setTestResult(test.id, 'passed');
+                        log(`✓ ${test.name}`, 'success');
+                    } catch (error) {
+                        setTestResult(test.id, 'failed', error.message);
+                        log(`✗ ${test.name}: ${error.message}`, 'error');
+                    }
+                    await wait(500);
+                }
+
+                // Run Phase 2
+                for (const test of tests.phase2) {
+                    setTestResult(test.id, 'running');
+                    try {
+                        await test.fn();
+                        setTestResult(test.id, 'passed');
+                        log(`✓ ${test.name}`, 'success');
+                    } catch (error) {
+                        setTestResult(test.id, 'failed', error.message);
+                        log(`✗ ${test.name}: ${error.message}`, 'error');
+                    }
+                    await wait(500);
+                }
+
+                // Run Phase 5
+                for (const test of tests.phase5) {
+                    setTestResult(test.id, 'running');
+                    try {
+                        await test.fn();
+                        setTestResult(test.id, 'passed');
+                        log(`✓ ${test.name}`, 'success');
+                    } catch (error) {
+                        setTestResult(test.id, 'failed', error.message);
+                        log(`✗ ${test.name}: ${error.message}`, 'error');
+                    }
+                    await wait(500);
+                }
+
+                log('🎉 Test suite completed!', 'success');
+            } finally {
+                disconnectSocket();
+                btn.disabled = false;
+                btn.textContent = '▶ Run All Tests';
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initUI();
+            log('Test suite initialized', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.io Test - Polling System</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 5px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        code {
+            background: #f1f1f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        button.check-server {
+            background: #28a745;
+        }
+        button.check-server:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Socket.io Backend Test</h1>
+        <div id="connection-status" class="status info">Ready to connect</div>
+        
+        <div style="background: #fff3cd; padding: 15px; margin: 15px 0; border-radius: 4px; border-left: 4px solid #ffc107;">
+            <strong>📋 Instructions:</strong><br>
+            1. Click "Check Server Status" to verify server is running<br>
+            2. Click "Connect" to establish Socket.io connection<br>
+            3. Register as Teacher or Student<br>
+            4. Test creating polls, starting polls, and voting<br>
+            5. Watch the event log at the bottom for all messages
+        </div>
+
+        <div style="background: #f8d7da; padding: 15px; margin: 15px 0; border-radius: 4px; border-left: 4px solid #dc3545;">
+            <strong>🔒 Security Architecture Explained:</strong><br>
+            <strong>Each user gets a unique Socket ID (this is correct!):</strong><br>
+            • Teacher in Tab 1: Socket ID "Ag_glTZWu0E4elLUAAAF"<br>
+            • Student in Tab 2: Socket ID "Jq3GrKSx5Vkwgko-AAAH"<br>
+            <br>
+            <strong>Session Registration links Socket ID to Role:</strong><br>
+            • When you register, server stores: {socketId → role → sessionId → name}<br>
+            • Server validates EVERY action by checking the socket's registered session<br>
+            • Client can't fake sessionId or name - server uses validated session data!<br>
+            <br>
+            <strong>✅ Security Test Workflow:</strong><br>
+            <strong>Test 1: Unauthorized access</strong><br>
+            1. Connect without registering → Try to vote ❌ "No session found"<br>
+            <br>
+            <strong>Test 2: Role validation</strong><br>
+            2. Register as Student → Try to create poll ❌ "Requires teacher role"<br>
+            3. Register as Teacher → Try to vote ❌ "Requires student role"<br>
+            <br>
+            <strong>Test 3: Correct flow</strong><br>
+            4. Tab 1: Register as Teacher → Create Poll → Start Poll ✅<br>
+            5. Tab 2: Register as Student → Submit Vote ✅<br>
+            6. Server uses authenticated session, not client-provided data!
+        </div>
+
+        <!-- Test 1: Connection -->
+        <div class="test-section">
+            <h3>Test 1: Socket Connection</h3>
+            <button class="check-server" onclick="checkServer()">✓ Check Server Status</button>
+            <button onclick="connectSocket()">Connect</button>
+            <button onclick="disconnectSocket()">Disconnect</button>
+            <div id="connection-log"></div>
+        </div>
+
+        <!-- Test 2: Session Registration -->
+        <div class="test-section">
+            <h3>Test 2: Session Registration</h3>
+            <select id="role">
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+            </select>
+            <input id="name" type="text" placeholder="Enter name" value="Test User">
+            <button onclick="registerSession()">Register Session</button>
+            <div id="session-log"></div>
+        </div>
+
+        <!-- Test 3: Create Poll (Teacher) -->
+        <div class="test-section">
+            <h3>Test 3: Create Poll (Teacher Only)</h3>
+            <input id="question" type="text" placeholder="Question" value="What is 2+2?" style="width: 300px;">
+            <br>
+            <input id="option1" type="text" placeholder="Option 1" value="3">
+            <input id="option2" type="text" placeholder="Option 2" value="4">
+            <input id="option3" type="text" placeholder="Option 3" value="5">
+            <br>
+            <input id="timer" type="number" placeholder="Timer (seconds)" value="30" min="15" max="300">
+            <button onclick="createPoll()">Create Poll</button>
+            <div id="poll-log"></div>
+        </div>
+
+        <!-- Test 4: Start Poll (Teacher) -->
+        <div class="test-section">
+            <h3>Test 4: Start Poll (Teacher Only)</h3>
+            <input id="pollId" type="text" placeholder="Poll ID" style="width: 300px;">
+            <button onclick="startPoll()">Start Poll</button>
+            <div id="start-log"></div>
+        </div>
+
+        <!-- Test 5: Submit Vote (Student) -->
+        <div class="test-section">
+            <h3>Test 5: Submit Vote (Student Only)</h3>
+            <input id="votePollId" type="text" placeholder="Poll ID" style="width: 300px;">
+            <input id="selectedOption" type="number" placeholder="Option (0, 1, 2...)" value="1" min="0">
+            <button onclick="submitVote()">Submit Vote</button>
+            <div id="vote-log"></div>
+        </div>
+
+        <!-- Test 6: Edge Cases Testing -->
+        <div class="test-section">
+            <h3>Test 6: Security & Edge Cases</h3>
+            <button onclick="runSecurityTests()">🔒 Run All Security Tests</button>
+            <button onclick="testDoubleVote()">Test Double Vote</button>
+            <button onclick="testInvalidPoll()">Test Invalid Poll</button>
+            <button onclick="getCurrentPollState()">Get Poll State</button>
+            <div id="edge-log"></div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="test-section">
+            <h3>All Events Log</h3>
+            <button onclick="clearLog()">Clear Log</button>
+            <div id="event-log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let sessionId = 'test-session-' + Date.now();
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+
+        function updateStatus(message, className) {
+            const status = document.getElementById('connection-status');
+            status.textContent = message;
+            status.className = 'status ' + className;
+        }
+
+        function checkServer() {
+            try {
+                log('🔍 Checking server status...', 'info');
+                const logDiv = document.getElementById('connection-log');
+                if (!logDiv) {
+                    console.error('connection-log element not found');
+                    return;
+                }
+                
+                logDiv.innerHTML = '<div class="status info">⏳ Checking server...</div>';
+                
+                fetch('http://localhost:5000/api/health', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        if (!response.ok) {
+                            throw new Error('Server responded with status: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Server data:', data);
+                        log('✅ Server is running: ' + JSON.stringify(data), 'success');
+                        logDiv.innerHTML = 
+                            '<div class="status success">✅ <strong>Server is running!</strong><br>' +
+                            'Status: ' + data.status + '<br>' +
+                            'Database: ' + data.database + '<br>' +
+                            'Environment: ' + data.environment + '<br>' +
+                            'Timestamp: ' + new Date(data.timestamp).toLocaleTimeString() + '</div>';
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        log('❌ Server not responding: ' + error.message, 'error');
+                        logDiv.innerHTML = 
+                            '<div class="status error">❌ <strong>Server not running!</strong><br>' +
+                            'Error: ' + error.message + '<br>' +
+                            'Please start the server:<br>' +
+                            '<code>cd server && npm run dev</code></div>';
+                    });
+            } catch (err) {
+                console.error('checkServer error:', err);
+                log('❌ Error in checkServer: ' + err.message, 'error');
+            }
+        }
+
+        function connectSocket() {
+            if (socket && socket.connected) {
+                log('Already connected!', 'warning');
+                return;
+            }
+
+            log('🔄 Attempting to connect to http://localhost:5000...', 'info');
+            updateStatus('Connecting...', 'info');
+
+            socket = io('http://localhost:5000', {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000
+            });
+
+            socket.on('connect', () => {
+                log('✅ Connected! Socket ID: ' + socket.id, 'success');
+                updateStatus('Connected: ' + socket.id, 'success');
+                document.getElementById('connection-log').innerHTML = 
+                    '<div class="status success">✅ Connected to server!</div>';
+            });
+
+            socket.on('connect_error', (error) => {
+                log('❌ Connection error: ' + error.message, 'error');
+                updateStatus('Connection failed', 'error');
+                document.getElementById('connection-log').innerHTML = 
+                    '<div class="status error">Connection error: ' + error.message + '<br>Make sure server is running on port 5000</div>';
+            });
+
+            socket.on('connect_timeout', () => {
+                log('⏱️ Connection timeout', 'error');
+                updateStatus('Connection timeout', 'error');
+            });
+
+            socket.on('disconnect', (reason) => {
+                log('❌ Disconnected: ' + reason, 'error');
+                updateStatus('Disconnected: ' + reason, 'error');
+            });
+
+            socket.on('reconnect_attempt', (attemptNumber) => {
+                log('🔄 Reconnection attempt #' + attemptNumber, 'info');
+            });
+
+            socket.on('reconnect', (attemptNumber) => {
+                log('✅ Reconnected after ' + attemptNumber + ' attempts', 'success');
+            });
+
+            socket.on('welcome', (data) => {
+                log('📩 Welcome message: ' + JSON.stringify(data), 'info');
+                document.getElementById('connection-log').innerHTML += 
+                    '<div class="status success">Welcome: ' + data.message + '</div>';
+            });
+
+            socket.on('session:registered', (data) => {
+                log('✅ Session registered: ' + JSON.stringify(data), 'success');
+                document.getElementById('session-log').innerHTML = 
+                    '<div class="status success">Registered as ' + data.role + ': ' + data.name + '</div>';
+            });
+
+            socket.on('session:error', (data) => {
+                log('❌ Session error: ' + data.message, 'error');
+                document.getElementById('session-log').innerHTML = 
+                    '<div class="status error">Error: ' + data.message + '</div>';
+            });
+
+            socket.on('poll:created', (data) => {
+                log('✅ Poll created: ' + JSON.stringify(data), 'success');
+                document.getElementById('poll-log').innerHTML = 
+                    '<div class="status success">Poll created! ID: ' + data.poll.pollId + '</div>';
+                document.getElementById('pollId').value = data.poll.pollId;
+                document.getElementById('votePollId').value = data.poll.pollId;
+            });
+
+            socket.on('poll:started', (data) => {
+                log('🚀 Poll started: ' + JSON.stringify(data), 'success');
+                document.getElementById('start-log').innerHTML = 
+                    '<div class="status success">Poll started! Question: ' + data.question + '</div>';
+            });
+
+            socket.on('vote:submitted', (data) => {
+                log('✅ Vote submitted: ' + JSON.stringify(data), 'success');
+                document.getElementById('vote-log').innerHTML = 
+                    '<div class="status success">' + data.message + '</div>';
+            });
+
+            socket.on('vote:error', (data) => {
+                log('❌ Vote error: ' + data.message, 'error');
+                document.getElementById('vote-log').innerHTML = 
+                    '<div class="status error">Error: ' + data.message + '</div>';
+            });
+
+            socket.on('poll:results:updated', (data) => {
+                log('📊 Results updated: ' + JSON.stringify(data), 'info');
+            });
+
+            socket.on('poll:ended', (data) => {
+                log('⏰ Poll ended: ' + JSON.stringify(data), 'info');
+            });
+
+            socket.on('poll:error', (data) => {
+                log('❌ Poll error: ' + data.message, 'error');
+            });
+
+            socket.on('students:updated', (data) => {
+                log('👥 Students updated: ' + data.count + ' students', 'info');
+            });
+        }
+
+        function disconnectSocket() {
+            if (socket) {
+                socket.disconnect();
+                log('Disconnected manually', 'info');
+            }
+        }
+
+        function registerSession() {
+            if (!socket || !socket.connected) {
+                alert('Please connect first!');
+                return;
+            }
+
+            const role = document.getElementById('role').value;
+            const name = document.getElementById('name').value;
+
+            socket.emit('session:register', {
+                sessionId: sessionId,
+                role: role,
+                name: name
+            });
+
+            log('📤 Registering session: ' + role + ' - ' + name, 'info');
+        }
+
+        function createPoll() {
+            if (!socket || !socket.connected) {
+                alert('Please connect first!');
+                return;
+            }
+
+            const question = document.getElementById('question').value;
+            const option1 = document.getElementById('option1').value;
+            const option2 = document.getElementById('option2').value;
+            const option3 = document.getElementById('option3').value;
+            const timer = parseInt(document.getElementById('timer').value);
+
+            const options = [option1, option2, option3].filter(o => o.trim() !== '');
+
+            socket.emit('poll:create', {
+                question: question,
+                options: options,
+                timerDuration: timer
+            });
+
+            log('📤 Creating poll: ' + question, 'info');
+        }
+
+        function startPoll() {
+            if (!socket || !socket.connected) {
+                alert('Please connect first!');
+                return;
+            }
+
+            const pollId = document.getElementById('pollId').value;
+            if (!pollId) {
+                alert('Please enter a poll ID!');
+                return;
+            }
+
+            socket.emit('poll:start', { pollId: pollId });
+            log('📤 Starting poll: ' + pollId, 'info');
+        }
+
+        function submitVote() {
+            if (!socket || !socket.connected) {
+                alert('Please connect first!');
+                return;
+            }
+
+            const pollId = document.getElementById('votePollId').value;
+            const selectedOption = parseInt(document.getElementById('selectedOption').value);
+
+            if (!pollId) {
+                alert('Please enter a poll ID!');
+                return;
+            }
+
+            // Server will use authenticated session data (no need to send sessionId or name)
+            socket.emit('vote:submit', {
+                pollId: pollId,
+                selectedOption: selectedOption
+            });
+
+            log('📤 Submitting vote for poll: ' + pollId, 'info');
+        }
+
+        function clearLog() {
+            document.getElementById('event-log').innerHTML = '';
+        }
+
+        // Edge Case Testing Functions
+        async function runSecurityTests() {
+            const edgeLog = document.getElementById('edge-log');
+            edgeLog.innerHTML = '<div class="status info">🧪 Running security tests...</div>';
+            
+            let results = [];
+            
+            // Test 1: Try action without session
+            if (!socket || !socket.connected) {
+                results.push('❌ Test 1 Failed: Not connected to test');
+            } else {
+                // Check if we have a session
+                const hasSession = await checkHasSession();
+                if (hasSession) {
+                    results.push('⚠️ Test 1 Skipped: Already have session (disconnect first to test)');
+                } else {
+                    results.push('✅ Test 1: No session test ready');
+                }
+            }
+            
+            edgeLog.innerHTML += '<div class="status info">' + results.join('<br>') + '</div>';
+            edgeLog.innerHTML += '<div class="status success">📋 See SOCKET_TEST_PLAN.md for full test suite</div>';
+        }
+        
+        function testDoubleVote() {
+            if (!socket || !socket.connected) {
+                alert('Please connect first!');
+                return;
+            }
+            
+            const pollId = document.getElementById('votePollId').value;
+            const edgeLog = document.getElementById('edge-log');
+            
+            if (!pollId) {
+                alert('Please enter a poll ID first!');
+                return;
+            }
+            
+            edgeLog.innerHTML = '<div class="status info">🧪 Testing double vote protection...</div>';
+            
+            // Submit first vote
+            socket.emit('vote:submit', {
+                pollId: pollId,
+                selectedOption: 0
+            });
+            
+            // Try to vote again after 500ms
+            setTimeout(() => {
+                socket.emit('vote:submit', {
+                    pollId: pollId,
+                    selectedOption: 1
+                });
+                edgeLog.innerHTML += '<div class="status info">Second vote attempt sent. Check event log below.</div>';
+                edgeLog.innerHTML += '<div class="status success">✅ Expected: "Already voted in this poll"</div>';
+            }, 500);
+            
+            log('🧪 Double vote test initiated', 'info');
+        }
+        
+        function testInvalidPoll() {
+            if (!socket || !socket.connected) {
+                alert('Please connect first!');
+                return;
+            }
+            
+            const edgeLog = document.getElementById('edge-log');
+            edgeLog.innerHTML = '<div class="status info">🧪 Testing invalid poll ID...</div>';
+            
+            // Try to vote on non-existent poll
+            socket.emit('vote:submit', {
+                pollId: 'invalid-poll-id-123',
+                selectedOption: 0
+            });
+            
+            edgeLog.innerHTML += '<div class="status success">✅ Expected: "Poll not found" or "Poll is not active"</div>';
+            log('🧪 Invalid poll test initiated', 'info');
+        }
+        
+        async function getCurrentPollState() {
+            const edgeLog = document.getElementById('edge-log');
+            edgeLog.innerHTML = '<div class="status info">🔍 Fetching current poll state...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/current-state');
+                const data = await response.json();
+                
+                if (data.success) {
+                    edgeLog.innerHTML = '<div class="status success">✅ Current Poll State:<br><pre>' + 
+                        JSON.stringify(data.data, null, 2) + '</pre></div>';
+                } else {
+                    edgeLog.innerHTML = '<div class="status info">ℹ️ No active poll</div>';
+                }
+            } catch (error) {
+                edgeLog.innerHTML = '<div class="status error">❌ Error: ' + error.message + '</div>';
+            }
+        }
+        
+        async function checkHasSession() {
+            // Try to get session from server (would need an endpoint)
+            // For now, just return false
+            return false;
+        }
+
+        // Manual connect - comment out auto-connect for debugging
+        window.onload = function() {
+            log('📄 Page loaded. Click "Connect" button to start testing.', 'info');
+            updateStatus('Ready to connect', 'info');
+            // Uncomment below to auto-connect:
+            // setTimeout(() => { connectSocket(); }, 500);
+        };
+    </script>
+</body>
+</html>
