@@ -141,6 +141,10 @@ class PollService {
         throw new Error('Poll not found');
       }
 
+      if (poll.status === 'completed') {
+        throw new Error('Poll has expired and is now closed');
+      }
+
       if (poll.status !== 'active') {
         throw new Error('Poll is not active');
       }

@@ -100,6 +100,17 @@ class SocketController {
             })),
             count: students.length
           });
+
+          // Send current poll results to the newly joined student
+          const activePoll = await PollService.getActivePoll();
+          if (activePoll) {
+            const results = await PollService.getPollResults(activePoll._id.toString());
+            socket.emit('poll:results:updated', {
+              pollId: results.pollId,
+              votes: results.votes,
+              totalVotes: results.totalVotes
+            });
+          }
         }
 
         console.log(`Session registered: ${sessionId} (${role}) - ${name}`);

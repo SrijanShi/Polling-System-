@@ -437,7 +437,12 @@
         }
 
         async function testViewResults() {
-            // Listen for results update
+            // Register a new student to trigger results broadcast
+            disconnectSocket();
+            await connectSocket();
+            
+            const newSessionId = 'observer-' + Date.now();
+            
             return new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => reject(new Error('No results received')), 3000);
                 
@@ -449,6 +454,13 @@
                     } else {
                         reject(new Error('Invalid results'));
                     }
+                });
+                
+                // This will trigger the results emission
+                socket.emit('session:register', {
+                    sessionId: newSessionId,
+                    role: 'student',
+                    name: 'Observer Student'
                 });
             });
         }
