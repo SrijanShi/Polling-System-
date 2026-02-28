@@ -42,9 +42,11 @@ class SocketController {
       this.handleRegisterSession(socket);
       this.handleCreatePoll(socket);
       this.handleStartPoll(socket);
+      this.handleClosePoll(socket);
       this.handleSubmitVote(socket);
       this.handleKickStudent(socket);
       this.handleSessionReconnect(socket);
+      this.handleChat(socket);
       this.handleDisconnect(socket);
     });
   }
@@ -58,15 +60,22 @@ class SocketController {
       try {
         const { sessionId, role, name } = data;
 
-        // Prevent multiple teachers from connecting
+        // Evict any stale teacher session so a new teacher can always take over
         if (role === 'teacher') {
           const existingTeacher = await SessionService.getTeacherSessions();
           if (existingTeacher) {
-            socket.emit('session:error', {
-              success: false,
-              message: 'A teacher is already connected to the system. Only one teacher allowed at a time.'
-            });
-            return;
+            // Disconnect old teacher socket if still alive
+            if (existingTeacher.socketId) {
+              const oldSocket = this.io.sockets.sockets.get(existingTeacher.socketId);
+              if (oldSocket) {
+                oldSocket.emit('session:error', {
+                  success: false,
+                  message: 'You have been replaced by a new teacher session.'
+                });
+                oldSocket.disconnect(true);
+              }
+            }
+            await SessionService.removeSession(existingTeacher.sessionId);
           }
         }
 
@@ -91,6 +100,7 @@ class SocketController {
         });
 
         if (role === 'student') {
+          // When student registers, broadcast participant names to other students too
           const students = await SessionService.getStudentSessions();
           this.io.to('teacher').emit('students:updated', {
             students: students.map(s => ({
@@ -100,8 +110,9 @@ class SocketController {
             })),
             count: students.length
           });
-
-          // Send current poll results to the newly joined student
+          this.io.to('students').emit('participants:updated', {
+            names: students.map(s => s.name)
+          });
           const activePoll = await PollService.getActivePoll();
           if (activePoll) {
             const results = await PollService.getPollResults(activePoll._id.toString());
@@ -116,10 +127,16 @@ class SocketController {
         console.log(`Session registered: ${sessionId} (${role}) - ${name}`);
       } catch (error: any) {
         console.error('Error registering session:', error.message);
-        socket.emit('session:error', {
-          success: false,
-          message: error.message
-        });
+        if (error.message === 'KICKED') {
+          socket.emit('session:kicked', {
+            message: 'You have been removed by the teacher and cannot rejoin any polls.'
+          });
+        } else {
+          socket.emit('session:error', {
+            success: false,
+            message: error.message
+          });
+        }
       }
     });
   }
@@ -169,13 +186,35 @@ class SocketController {
           }
 
           console.log(`Session reconnected: ${sessionId}`);
+
+          // Refresh participant lists for teacher and students
+          if (session.role === 'student') {
+            const students = await SessionService.getStudentSessions();
+            this.io.to('teacher').emit('students:updated', {
+              students: students.map(s => ({
+                sessionId: s.sessionId,
+                name: s.name,
+                connectedAt: s.connectedAt
+              })),
+              count: students.length
+            });
+            this.io.to('students').emit('participants:updated', {
+              names: students.map(s => s.name)
+            });
+          }
         }
       } catch (error: any) {
         console.error('Error reconnecting session:', error.message);
-        socket.emit('session:error', {
-          success: false,
-          message: error.message
-        });
+        if (error.message === 'KICKED') {
+          socket.emit('session:kicked', {
+            message: 'You have been removed by the teacher and cannot rejoin any polls.'
+          });
+        } else {
+          socket.emit('session:error', {
+            success: false,
+            message: error.message
+          });
+        }
       }
     });
   }
@@ -245,11 +284,13 @@ class SocketController {
         });
 
         this.io.emit('poll:started', {
+          _id: poll._id,
           pollId: poll._id,
           question: poll.question,
           options: poll.options,
           timerDuration: poll.timerDuration,
-          startedAt: poll.startedAt
+          startedAt: poll.startedAt,
+          status: 'active'
         });
 
         console.log(`Poll started: ${poll._id}`);
@@ -332,6 +373,34 @@ class SocketController {
     }
   }
 
+  private handleClosePoll(socket: Socket): void {
+    socket.on('poll:close', async () => {
+      try {
+        const validation = await this.validateRole(socket, 'teacher');
+        if (!validation.valid) {
+          socket.emit('poll:error', { success: false, message: validation.message });
+          return;
+        }
+
+        const activePoll = await PollService.getActivePoll();
+        if (!activePoll) {
+          socket.emit('poll:error', { success: false, message: 'No active poll to close.' });
+          return;
+        }
+
+        const pollId = activePoll._id.toString();
+        // Stop the timer so it does not fire again after manual close
+        TimerManager.clearTimer(pollId);
+        await this.handlePollExpired(pollId);
+
+        console.log(`Poll manually closed by teacher: ${pollId}`);
+      } catch (error: any) {
+        console.error('Error closing poll:', error.message);
+        socket.emit('poll:error', { success: false, message: error.message });
+      }
+    });
+  }
+
   private handleKickStudent(socket: Socket): void {
     socket.on('student:kick', async (data: { sessionId: string }) => {
       try {
@@ -373,6 +442,9 @@ class SocketController {
             })),
             count: students.length
           });
+          this.io.to('students').emit('participants:updated', {
+            names: students.map(s => s.name)
+          });
 
           console.log(`Student kicked: ${sessionId}`);
         }
@@ -403,11 +475,37 @@ class SocketController {
             })),
             count: students.length
           });
+          this.io.to('students').emit('participants:updated', {
+            names: students.map(s => s.name)
+          });
         }
 
         console.log(`Client disconnected: ${socket.id}`);
       } catch (error: any) {
         console.error('Error handling disconnect:', error.message);
+      }
+    });
+  }
+
+  private handleChat(socket: Socket): void {
+    socket.on('chat:send', async (data: { text: string }) => {
+      try {
+        const session = await this.validateSession(socket);
+        if (!session) {
+          socket.emit('chat:error', { message: 'Not registered.' });
+          return;
+        }
+        if (!data.text?.trim()) return;
+
+        this.io.emit('chat:message', {
+          name: session.name,
+          role: session.role,
+          text: data.text.trim().slice(0, 300),
+          senderId: session.sessionId,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error: any) {
+        console.error('Chat error:', error.message);
       }
     });
   }

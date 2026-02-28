@@ -8,7 +8,10 @@ class SessionService {
       let session = await Session.findOne({ sessionId });
 
       if (session) {
-
+        // Block kicked students from re-registering with same sessionId
+        if (session.isKicked) {
+          throw new Error('KICKED');
+        }
         session.socketId = socketId;
         session.connectedAt = new Date();
         await session.save();
@@ -66,7 +69,7 @@ class SessionService {
 
   async getStudentSessions(): Promise<SessionDocument[]>{
     try {
-        const students = await Session.find({role: 'student'}).sort({connectedAt: -1});
+        const students = await Session.find({ role: 'student', isKicked: { $ne: true } }).sort({connectedAt: -1});
         return students;
     }
     catch(error: any){
@@ -88,6 +91,11 @@ class SessionService {
 
   async updateSocketId(sessionId: string, newSocketId: string): Promise<SessionDocument | null> {
     try {
+      const existing = await Session.findOne({ sessionId });
+      if (existing && existing.isKicked) {
+        throw new Error('KICKED');
+      }
+
       const session = await Session.findOneAndUpdate(
         { sessionId },
         { 
@@ -110,8 +118,14 @@ class SessionService {
 
   async removeSession(socketId: string): Promise<void> {
     try {
-      const session = await Session.findOneAndDelete({ socketId });
-      
+      const session = await Session.findOne({ socketId });
+      // Keep kicked sessions in DB so the ban persists
+      if (session && session.isKicked) {
+        await Session.findOneAndUpdate({ socketId }, { socketId: '' });
+        console.log(`Kicked session disconnected (preserved): ${session.sessionId}`);
+        return;
+      }
+      await Session.findOneAndDelete({ socketId });
       if (session) {
         console.log(`Session removed: ${session.sessionId} (${session.role})`);
       }
@@ -136,15 +150,18 @@ class SessionService {
 
   async kickStudent(sessionId: string): Promise<SessionDocument | null> {
     try {
-      const session = await Session.findOne({ sessionId, role: 'student' });
+      // Mark as kicked (keep in DB so vote data and ban persist)
+      const session = await Session.findOneAndUpdate(
+        { sessionId, role: 'student' },
+        { isKicked: true },
+        { new: false } // return the old doc to get socketId
+      );
 
       if (!session) {
         throw new Error('Student session not found');
       }
 
-      await Session.findByIdAndDelete(session._id);
-      console.log(`Student kicked: ${sessionId}`);
-
+      console.log(`Student kicked (banned): ${sessionId}`);
       return session;
     } catch (error: any) {
       console.error('Error kicking student:', error.message);

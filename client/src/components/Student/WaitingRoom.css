@@ -1,0 +1,75 @@
+.waiting-room {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  gap: 20px;
+  text-align: center;
+  padding: 20px;
+}
+
+.wr-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: wrSpin 0.9s linear infinite;
+}
+
+@keyframes wrSpin {
+  to { transform: rotate(360deg); }
+}
+
+.waiting-room h2 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--dark);
+  margin: 0;
+}
+
+
+.loading-spinner {
+  width: 80px;
+  height: 80px;
+  border: 6px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 2rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.waiting-room h2 {
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.waiting-room p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.3rem;
+  max-width: 500px;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .loading-spinner {
+    width: 60px;
+    height: 60px;
+  }
+
+  .waiting-room h2 {
+    font-size: 1.8rem;
+  }
+
+  .waiting-room p {
+    font-size: 1.1rem;
+  }
+}

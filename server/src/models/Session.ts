@@ -32,6 +32,10 @@ const SessionSchema: Schema = new Schema({
   connectedAt: {
     type: Date,
     default: Date.now
+  },
+  isKicked: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

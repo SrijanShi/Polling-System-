@@ -8,25 +8,6 @@ export interface IPoll {
   status: 'pending' | 'active' | 'completed';
 }
 
-export interface IVote {
-  _id?: string;
-  pollId: string;
-  studentName: string;
-  sessionId: string;
-  selectedOption: number;
-  timestamp: Date;
-}
-
-export interface ISession {
-  _id?: string;
-  sessionId: string;
-  role: 'teacher' | 'student';
-  name: string;
-  socketId: string;
-  connectedAt: Date;
-  isKicked?: boolean;
-}
-
 export interface PollState {
   poll: IPoll;
   votes: { [option: number]: number };
@@ -48,4 +29,10 @@ export interface PollResults {
   votes: VoteCount[];
   totalVotes: number;
   status: 'pending' | 'active' | 'completed';
+}
+
+export interface SessionData {
+  sessionId: string;
+  role: 'teacher' | 'student';
+  name: string;
 }

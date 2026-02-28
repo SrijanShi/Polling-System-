@@ -1,0 +1,250 @@
+.pr-page {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pr-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 32px;
+  width: 100%;
+  max-width: 640px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+
+.pr-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.pr-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pr-row-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pq-opt-num.leading {
+  background: var(--primary-dark);
+}
+
+.pr-bar-track {
+  position: relative;
+  background: #EFEFEF;
+  border-radius: 6px;
+  height: 36px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.pr-bar-fill {
+  height: 100%;
+  background: #CACACA;
+  border-radius: 6px;
+  transition: width 0.8s ease;
+}
+.pr-bar-fill.leading {
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
+}
+
+.pr-pct {
+  position: absolute;
+  right: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.pr-waiting {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0;
+  font-style: italic;
+}
+
+
+.poll-results > div {
+  width: 100%;
+  max-width: 700px;
+}
+
+.poll-results h2 {
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.question {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 3rem;
+  line-height: 1.4;
+}
+
+.results-list {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  margin-bottom: 2rem;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.result-item {
+  margin-bottom: 2rem;
+}
+
+.result-item:last-child {
+  margin-bottom: 0;
+}
+
+.option-label {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 1.2rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 50px;
+  background: #f7fafc;
+  border-radius: 25px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 25px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer 2.5s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    left: 100%;
+  }
+}
+
+.stats {
+  text-align: right;
+  color: #718096;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.total-votes {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 16px;
+  text-align: center;
+  color: #667eea;
+  font-weight: 600;
+  font-size: 1.3rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.7s ease 0.3s both;
+}
+
+.waiting-message {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+  padding: 2rem;
+  border-radius: 16px;
+  text-align: center;
+  color: #667eea;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@media (max-width: 768px) {
+  .poll-results h2 {
+    font-size: 2rem;
+  }
+
+  .question {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .results-list {
+    padding: 1.5rem;
+  }
+
+  .option-label {
+    font-size: 1rem;
+  }
+
+  .progress-bar {
+    height: 40px;
+  }
+
+  .progress-fill {
+    font-size: 1rem;
+  }
+
+  .waiting-message {
+    padding: 1.5rem;
+    font-size: 1rem;
+  }
+}
