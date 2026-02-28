@@ -1,0 +1,23 @@
+# Fly.io config for the frontend (React + Vite, served by nginx)
+# App name — change this to something unique on fly.io
+app = "polling-system-frontend"
+primary_region = "iad"
+
+[build]
+  [build.args]
+    # Replace with your actual backend Fly.io URL after deploying the server
+    VITE_API_URL = "https://polling-system-backend.fly.dev"
+    VITE_SOCKET_URL = "https://polling-system-backend.fly.dev"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

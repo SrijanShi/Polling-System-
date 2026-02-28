@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+*.log
+npm-debug.log*
+nodemon.json
+test-*.html
+test-*.sh
+*.md
+*.txt
+clear-db.js
