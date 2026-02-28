@@ -46,7 +46,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({ role, name, sessionId }) =
         role: data.role as 'teacher' | 'student',
         text: data.text,
         timestamp: new Date(data.timestamp),
-        isMe: data.senderId === sessionId,
+        isMe: data.senderId === sessionId || data.name === name,
       };
       setMessages(prev => [...prev, msg]);
     };
