@@ -291,27 +291,11 @@ socket.emit('vote:submit', {
 3. **Timer Sync** - Relies on client-server time agreement
 4. **LAN Optimized** - Best used in local network/classroom environment
 
-## 🤝 Contributing
-
-This is an educational project. Feel free to fork and experiment!
 
 ## 📄 License
 
 MIT License - See LICENSE file for details
 
-## 👨‍💻 Author
 
-**Srijan Shitashma**
-- GitHub: [@SrijanShi](https://github.com/SrijanShi)
-
-## 🙏 Acknowledgments
-
-- Built as part of a full-stack development learning project
-- Inspired by classroom polling systems like Kahoot and Mentimeter
-- Focus on production-ready code with comprehensive testing
-
----
-
-**Current Status**: Backend Complete ✅ | Frontend In Progress 🚧
 
 **Last Updated**: February 27, 2026
