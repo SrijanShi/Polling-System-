@@ -1,12 +1,12 @@
-# 📊 Resilient Live Polling System
+# Resilient Live Polling System
 
 A real-time polling system with state recovery, built with React, Node.js, Express, Socket.io, and MongoDB. Designed for classroom environments with Teacher and Student personas.
 
-## 🎯 Project Overview
+## Project Overview
 
 This system enables teachers to create live polls with timers, while students can join and vote in real-time. The key feature is **state recovery** - if a teacher refreshes mid-poll, the poll persists. If a student joins late, their timer synchronizes correctly (e.g., joining 30 seconds into a 60-second poll shows 30 seconds remaining, not 60).
 
-## ✨ Features
+## Features
 
 ### Core Features
 - ✅ **Real-time Polling** - Live vote updates using Socket.io
@@ -28,7 +28,7 @@ This system enables teachers to create live polls with timers, while students ca
 - ✅ **Network Recovery** - Auto-reconnection on disconnect
 - ✅ **Timer Persistence** - Timers restore after server restart
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ├── server/                   # Backend (Node.js + Express + Socket.io)
@@ -48,7 +48,7 @@ This system enables teachers to create live polls with timers, while students ca
     └── [Not yet implemented - Next step]
 ```
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend (Complete ✅)
 - **Node.js** v18+ with TypeScript
@@ -57,13 +57,13 @@ This system enables teachers to create live polls with timers, while students ca
 - **MongoDB** with Mongoose 9.2.2 - Database and ODM
 - **nodemon** 3.1.14 - Hot reload during development
 
-### Frontend (Planned 🚧)
+### Frontend
 - **React** with Vite - UI framework
 - **TypeScript** - Type safety
 - **Socket.io-client** - Real-time updates
 - **Custom Hooks** - useSocket, usePollTimer, usePollState
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 - Node.js v18 or higher
@@ -98,7 +98,7 @@ npm run dev
 
 Server will start on `http://localhost:5000`
 
-## 🧪 Testing
+## Testing
 
 ### Automated Tests (26 tests)
 
@@ -126,7 +126,7 @@ open server/test-socket.html
 # 3. Verify real-time results update in both tabs
 ```
 
-## 📡 API Documentation
+## API Documentation
 
 ### Socket.io Events
 
@@ -163,7 +163,7 @@ open server/test-socket.html
 | GET | `/api/current-state` | Get active poll |
 | DELETE | `/api/polls/:id` | Delete poll |
 
-## 🗃️ Database Schema
+## Database Schema
 
 ### Poll Model
 ```typescript
@@ -201,7 +201,7 @@ open server/test-socket.html
 }
 ```
 
-## 🔒 Security Features
+## Security Features
 
 1. **Session Validation** - All socket events require authenticated session
 2. **Role-based Authorization** - Teachers can't vote, students can't create polls
@@ -210,7 +210,7 @@ open server/test-socket.html
 5. **Single Teacher Lock** - Only one teacher allowed per system instance
 6. **Input Validation** - Comprehensive validation on all inputs
 
-## 📝 Project Status
+## Project Status
 
 ### ✅ Completed (Backend - Steps 1-4)
 - [x] Project structure and TypeScript setup
@@ -222,18 +222,7 @@ open server/test-socket.html
 - [x] Comprehensive testing suite
 - [x] Documentation
 
-### 🚧 In Progress
-- [ ] Frontend React implementation (Step 5)
-
-### 📋 Next Steps
-1. Create React app with Vite + TypeScript
-2. Implement custom hooks (useSocket, usePollTimer, usePollState)
-3. Build Teacher UI (create/start poll, view results, student list)
-4. Build Student UI (join poll, vote, timer countdown)
-5. Implement state recovery on page load
-6. Match Figma design (purple theme, percentage bars)
-
-## 🎓 Usage Example
+## Usage Example
 
 ### Teacher Flow
 ```typescript
@@ -284,7 +273,7 @@ socket.emit('vote:submit', {
 });
 ```
 
-## 🐛 Known Limitations
+## Known Limitations
 
 1. **Single Teacher** - Only one teacher can connect at a time (by design)
 2. **No Authentication** - Uses session IDs, not user accounts (suitable for classroom)
@@ -292,7 +281,7 @@ socket.emit('vote:submit', {
 4. **LAN Optimized** - Best used in local network/classroom environment
 
 
-## 📄 License
+## License
 
 MIT License - See LICENSE file for details
 
